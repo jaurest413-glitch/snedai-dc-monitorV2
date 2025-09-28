@@ -1,0 +1,308 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #0b3a7e;
+  --color-primary-light: rgba(11, 58, 126, 0.1);
+  --color-accent: #f05a28;
+  --color-accent-light: rgba(240, 90, 40, 0.1);
+  --color-info: #2b6cb0;
+  --color-emphasis: #ff7a45;
+  --color-background: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-border: #d9e2ec;
+  --color-foreground: #0f172a;
+  --color-muted: #486581;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-emphasis: #ff7a45;
+  --color-background: #f5f7fa;
+  --color-background: #f5f7fa;
+  --color-surface: #ffffff;
+  --color-border: #d9e2ec;
+  --color-muted: #486581;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  --font-display: 'Inter', sans-serif;
+
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-float: float 20s linear infinite;
+  --animate-shine: shine 3s infinite;
+  --animate-dropdownSlide: dropdownSlide 0.3s ease-out;
+  --animate-rotate: rotate 4s linear infinite;
+  --animate-gradient: gradient 3s ease infinite;
+  --animate-fadeInUp: fadeInUp 0.8s ease-out;
+  --animate-fadeInUpDelayed: fadeInUp 0.8s ease-out 0.2s both;
+
+  @keyframes float {
+    0% {
+      transform: translateY(100vh) translateX(-50px) rotate(0deg);
+    }
+    100% {
+      transform: translateY(-100vh) translateX(50px) rotate(360deg);
+    }
+  }
+
+  @keyframes shine {
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+
+  @keyframes dropdownSlide {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes rotate {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.gradient-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.gauge-bg {
+  fill: none;
+  stroke: #d9e2ec;
+  stroke-width: 16;
+  stroke-linecap: round;
+}
+
+.gauge-fill {
+  fill: none;
+  stroke-width: 16;
+  stroke-linecap: round;
+  transition: all 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.particle {
+  position: absolute;
+  background: linear-gradient(45deg, #0b3a7e, #2b6cb0);
+  border-radius: 50%;
+  opacity: 0.1;
+  animation: float 20s infinite linear;
+}
+
+.connection-indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.connection-indicator.online::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: pulse 2s infinite;
+}
+
+.connection-indicator.offline::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+/* STYLES ALERTES DATACENTER */
+.alert-temp {
+  border: 3px solid #e74c3c;
+  animation: blinkRed 1s infinite;
+}
+
+.alert-humidity {
+  border: 3px solid #f39c12;
+}
+
+@keyframes blinkRed {
+  0%,
+  50% {
+    border-color: #e74c3c;
+  }
+  51%,
+  100% {
+    border-color: transparent;
+  }
+}
+
+/* ANIMATIONS INDICATEURS */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.status-online {
+  background: #27ae60;
+}
+.status-offline {
+  background: #e74c3c;
+  animation: none;
+}
+.status-warning {
+  background: #f39c12;
+}
+
+/* Fix dropdown z-index issues */
+#dropdown-content {
+  position: absolute !important;
+  z-index: 9999 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+.dropdown-container {
+  position: relative !important;
+  z-index: 100 !important;
+}
+
+/* Ensure site selector container doesn't clip dropdown */
+.site-selector-container {
+  overflow: visible !important;
+  z-index: 10 !important; /* Réduit pour ne pas cacher le header */
+}
+
+/* S'assurer que le header reste toujours au-dessus */
+header {
+  z-index: 100 !important;
+}
+
+/* Éviter que le contenu monte sur le header */
+.main-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* 🔧 STYLES POUR LES ANIMATIONS DU DROPDOWN - VERSION PREMIUM */
+#dropdown-content {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+#dropdown-content.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+#dropdown-btn span:last-child {
+  transition: transform 0.3s ease;
+}
+
+.dropdown-item.selected {
+  background-color: rgba(59, 130, 246, 0.1);
+  font-weight: 700;
+  border-left: 4px solid #3b82f6;
+}
+
+/* 🎨 AMÉLIORATIONS VISUELLES */
+.dropdown-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #10b981, #059669);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.dropdown-item:hover::before {
+  opacity: 1;
+}
+
+/* Spécifique pour SIEGE */
+.dropdown-item[onclick*='SIEGE']::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+/* Spécifique pour PLATEAU */
+.dropdown-item[onclick*='PLATEAU']::before {
+  background: linear-gradient(90deg, #06b6d4, #0369a1);
+}
+
+.dropdown-item:hover {
+  color: white;
+  padding-left: 1.5rem;
+}
