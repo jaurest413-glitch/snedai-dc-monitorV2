@@ -38,12 +38,7 @@ export const LastUpdate = (props) => {
             </div>
           </div>
         </div>
-        <button
-          onClick={fetchLatestData}
-          className="cursor-pointer bg-gradient-to-br from-primary to-info text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 min-h-[44px] w-full sm:w-auto"
-        >
-          <FontAwesomeIcon icon={faSyncAlt} className="mr-2" /> Actualiser
-        </button>
+        
       </div>
     </div>
   )

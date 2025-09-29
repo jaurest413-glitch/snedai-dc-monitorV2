@@ -7,7 +7,6 @@ import { useState, useEffect, useRef } from 'react'
 import { CircularProgress } from '@mui/material'
 
 import { Header } from './components'
-import { Section } from './components'
 import { MainContent } from './components'
 import { Footer } from './components'
 import { Dashboard } from './components/Dashboard'
@@ -357,7 +356,6 @@ function App() {
 
       {/* 🧩 COMPOSANTS PRINCIPAUX */}
       <Header onNavigate={navigateTo} currentPage={currentPage} />
-      <Section />
       <MainContent
         latestReading={latestReading}
         readings={readings}

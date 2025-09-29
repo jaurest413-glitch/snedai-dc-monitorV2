@@ -8,7 +8,7 @@ export const Header = ({ onNavigate, currentPage = 'home' }) => {
             S
           </div>
           <h1 className="text-2xl font-black gradient-text bg-gradient-to-br from-primary to-accent long-title">
-            SNEDAI DC MONITORING
+            SNEDAI DC MONITOR
           </h1>
         </div>
         <div className="flex items-center space-x-4">

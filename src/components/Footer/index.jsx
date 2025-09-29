@@ -189,9 +189,20 @@ export const Footer = () => {
                 SNEDAI DC Monitor
               </span>{' '}
               - Développé par{' '}
-              <span className="text-orange-400 font-semibold">
-                SNEDAI Technologies
-              </span>
+               <a 
+                 href="https://snedai-technologies.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-orange-400 font-semibold inline-flex items-center hover:text-orange-300 transition-colors"
+                >
+                  <img 
+                    src="/images/logoSnedaiTechNoBackground.png" 
+                    alt="SNEDAI Technologies" 
+                    className="w-8 h-8 mr-2"
+                />
+                
+                </a>
+              
             </p>
           </div>
         </div>

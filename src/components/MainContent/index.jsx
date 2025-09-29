@@ -1,5 +1,4 @@
 import { SiteSelector } from '../SiteSelector'
-import { ErrorContainer } from '../ErrorContainer'
 import { LastUpdate } from '../LastUpdate'
 import { Gauges } from '../Gauges'
 import { EvolutionChartSection } from '../EvolutionChartSection'
@@ -19,7 +18,6 @@ export const MainContent = (props) => {
         selectedSite={selectedSite}
         handleSelectSite={handleSelectSite}
       />
-      <ErrorContainer />
       <LastUpdate
         fetchLatestData={fetchLatestData}
         timestamp={latestReading.recorded_at}
