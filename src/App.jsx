@@ -71,8 +71,12 @@ function App() {
     try {
       setIsLoading(true)
 
-      const response = await fetch(
-        `https://zmdsgzswdovyxrvkfjml.supabase.co/rest/v1/api_sensorreading?order=recorded_at.desc&limit=24&device_id=eq.${siteId}`,
+      console.log(`🔍 Récupération intelligente des données pour ${siteId}`)
+
+      // 📊 ÉTAPE 1: Récupérer la dernière mesure
+      console.log('📡 Étape 1: Récupération de la dernière mesure...')
+      const lastResponse = await fetch(
+        `https://zmdsgzswdovyxrvkfjml.supabase.co/rest/v1/api_sensorreading?order=recorded_at.desc&limit=1&device_id=eq.${siteId}`,
         {
           headers: {
             apikey: 'sb_publishable_KE0jmINtV1X5fPC9ULcmFg_Tsb4s_N4',
@@ -83,11 +87,11 @@ function App() {
         },
       )
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      if (!lastResponse.ok) {
+        throw new Error(`HTTP error! status: ${lastResponse.status}`)
       }
 
-      const data = await response.json()
+      const lastData = await lastResponse.json()
 
       // 🛡️ VÉRIFICATION: S'assurer que le composant est toujours monté
       if (isUnmountingRef.current) {
@@ -95,11 +99,64 @@ function App() {
         return
       }
 
-      if (data && data.length > 0) {
-        setReadings(data)
-        setLatestReading(data[0])
+      if (lastData.length === 0) {
+        // ❌ Aucune donnée disponible
+        console.log('⚠️ Aucune donnée trouvée pour ce site')
+        setReadings([])
+        setLatestReading({
+          temperature_c: '--',
+          humidity_percent: '--',
+          id: 0,
+          device_id: siteId,
+          recorded_at: new Date().toISOString(),
+        })
+        setSiteStatus('offline')
+        return
+      }
+
+      // 📊 ÉTAPE 2: Calculer la date de début (24h avant la dernière mesure)
+      const lastDate = new Date(lastData[0].recorded_at)
+      const startDate = new Date(lastDate.getTime() - 24 * 60 * 60 * 1000) // 24h avant
+
+      console.log(`📅 Dernière mesure: ${lastDate.toISOString()}`)
+      console.log(`📅 Début période: ${startDate.toISOString()}`)
+
+      // 📊 ÉTAPE 3: Récupérer toutes les données depuis cette date
+      console.log('📡 Étape 2: Récupération des données sur 24h...')
+      const allResponse = await fetch(
+        `https://zmdsgzswdovyxrvkfjml.supabase.co/rest/v1/api_sensorreading?order=recorded_at.asc&device_id=eq.${siteId}&recorded_at=gte.${startDate.toISOString()}`,
+        {
+          headers: {
+            apikey: 'sb_publishable_KE0jmINtV1X5fPC9ULcmFg_Tsb4s_N4',
+            Authorization:
+              'Bearer sb_publishable_KE0jmINtV1X5fPC9ULcmFg_Tsb4s_N4',
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+
+      if (!allResponse.ok) {
+        throw new Error(`HTTP error! status: ${allResponse.status}`)
+      }
+
+      const allData = await allResponse.json()
+
+      // 🛡️ VÉRIFICATION FINALE: S'assurer que le composant est toujours monté
+      if (isUnmountingRef.current) {
+        console.log('⏹️ Composant démonté pendant la requête, données ignorées')
+        return
+      }
+
+      if (allData && allData.length > 0) {
+        setReadings(allData)
+        setLatestReading(allData[allData.length - 1]) // Dernière mesure
         setSiteStatus('online')
-        console.log('✅ Données mises à jour sans rechargement')
+        console.log(
+          `✅ ${allData.length} points récupérés sur 24h intelligentes`,
+        )
+        console.log(
+          `📊 Période: ${new Date(allData[0].recorded_at).toLocaleString()} → ${new Date(allData[allData.length - 1].recorded_at).toLocaleString()}`,
+        )
       } else {
         setReadings([])
         setLatestReading({
@@ -110,10 +167,10 @@ function App() {
           recorded_at: new Date().toISOString(),
         })
         setSiteStatus('offline')
-        console.log('⚠️ Site hors ligne, interface mise à jour')
+        console.log('⚠️ Aucune donnée dans la période de 24h')
       }
     } catch (error) {
-      console.error('❌ Erreur lors de la récupération:', error)
+      console.error('❌ Erreur lors de la récupération intelligente:', error)
 
       // 🛡️ GESTION D'ERREUR SANS RECHARGEMENT
       if (!isUnmountingRef.current) {

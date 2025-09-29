@@ -23,16 +23,15 @@ export const EvolutionChartSection = (props) => {
   // 🧭 NAVIGATION SÉCURISÉE VERS LE DASHBOARD
   const goToDashboard = () => {
     console.log('🔄 Navigation vers le dashboard...')
-    
+
     try {
       // ✅ NAVIGATION SIMPLE SANS ÉVÉNEMENTS CUSTOM
       const url = new URL(window.location)
       url.searchParams.set('page', 'dashboard')
       window.history.pushState({ page: 'dashboard' }, '', url.toString())
-      
+
       // 🔄 DÉCLENCHER UN ÉVÉNEMENT STANDARD
       window.dispatchEvent(new PopStateEvent('popstate'))
-      
     } catch (error) {
       console.error('❌ Erreur lors de la navigation:', error)
       // Fallback: rechargement contrôlé si nécessaire
@@ -47,7 +46,9 @@ export const EvolutionChartSection = (props) => {
 
     // 🛡️ PROTECTION: Éviter les initialisations multiples
     if (isInitializedRef.current) {
-      console.log('⚠️ Graphique déjà initialisé, mise à jour des données uniquement')
+      console.log(
+        '⚠️ Graphique déjà initialisé, mise à jour des données uniquement',
+      )
       updateChartData()
       return
     }
@@ -172,7 +173,7 @@ export const EvolutionChartSection = (props) => {
                   font: { size: 11, weight: '500' },
                   color: '#486581',
                   maxRotation: 45,
-                  maxTicksLimit: 10,
+                  maxTicksLimit: 24, // ✅ Plus de points pour 24h
                 },
               },
               y: {
@@ -208,7 +209,6 @@ export const EvolutionChartSection = (props) => {
 
         // 🔄 CHARGER LES DONNÉES INITIALES
         updateChartData()
-
       } catch (error) {
         console.error('❌ Erreur lors de la création du graphique:', error)
       }
@@ -247,20 +247,19 @@ export const EvolutionChartSection = (props) => {
       chartRef.current.data.datasets[1].label = `Humidité (${selectedSite})`
 
       if (readings && readings.length > 0) {
-        // 📊 TRAITEMENT DES DONNÉES
-        const labels = readings
-          .map((d) => {
-            const date = new Date(d.recorded_at)
-            const day = String(date.getDate()).padStart(2, '0')
-            const month = String(date.getMonth() + 1).padStart(2, '0')
-            const hours = String(date.getHours()).padStart(2, '0')
-            const minutes = String(date.getMinutes()).padStart(2, '0')
-            return `${day}/${month} ${hours}:${minutes}`
-          })
-          .reverse()
+        // 📊 TRAITEMENT DES DONNÉES (ordre chronologique)
+        const labels = readings.map((d) => {
+          const date = new Date(d.recorded_at)
+          const day = String(date.getDate()).padStart(2, '0')
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const hours = String(date.getHours()).padStart(2, '0')
+          const minutes = String(date.getMinutes()).padStart(2, '0')
+          return `${day}/${month} ${hours}:${minutes}`
+        })
+        // ✅ SUPPRESSION DU .reverse() pour ordre chronologique
 
-        const temperatures = readings.map((d) => d.temperature_c).reverse()
-        const humidities = readings.map((d) => d.humidity_percent).reverse()
+        const temperatures = readings.map((d) => d.temperature_c)
+        const humidities = readings.map((d) => d.humidity_percent)
 
         // 📈 MISE À JOUR DES DONNÉES
         chartRef.current.data.labels = labels
@@ -279,7 +278,6 @@ export const EvolutionChartSection = (props) => {
 
       // 🔄 MISE À JOUR DU GRAPHIQUE
       chartRef.current.update('none') // Sans animation
-
     } catch (error) {
       console.error('❌ Erreur lors de la mise à jour du graphique:', error)
     }
@@ -295,7 +293,6 @@ export const EvolutionChartSection = (props) => {
     <div id="evolution-chart-container" className="mb-12 mx-4 mobile-optimized">
       {/* Conteneur Principal */}
       <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl shadow-gray-900/10 border border-gray-200/60 overflow-hidden transition-all duration-300 hover:shadow-3xl hover:shadow-gray-900/20">
-        
         {/* Titre Professionnel */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-900 text-white p-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shine"></div>
