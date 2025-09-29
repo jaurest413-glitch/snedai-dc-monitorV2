@@ -1,19 +1,9 @@
 /**
  * 🏗️ COMPOSANT PRINCIPAL - APPLICATION DE MONITORING
- *
- * Architecture:
- * - Gestion d'état centralisée pour le sélecteur de site
- * - API Supabase pour récupération des données IoT
- * - Interface adaptative selon la disponibilité des données
- * - Gestion robuste des erreurs et sites hors ligne
- *
- * Sites supportés:
- * - SANON (ESP32_DHT11) - Site principal avec données
- * - SIEGE (ESP32_DHT11_SIEGE) - Site secondaire
- * - PLATEAU (ESP32_DHT11_PLATEAU) - Site secondaire
+ * VERSION CORRIGÉE - SANS RECHARGEMENT AUTOMATIQUE
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CircularProgress } from '@mui/material'
 
 import { Header } from './components'
@@ -22,24 +12,43 @@ import { MainContent } from './components'
 import { Footer } from './components'
 import { Dashboard } from './components/Dashboard'
 import AboutModal from './components/AboutModal'
+import {
+  createSafeInterval,
+  getRefreshInterval,
+  getSiteConfig,
+} from './config/refreshConfig'
 
 function App() {
-  // 🧭 NAVIGATION: État de la page actuelle (home/dashboard)
+  // 🔄 RÉFÉRENCE POUR ÉVITER LES FUITES MÉMOIRE
+  const intervalsRef = useRef([])
+  const isUnmountingRef = useRef(false)
+
+  // 🛡️ PROTECTION SIMPLIFIÉE - SANS GESTIONNAIRES GLOBAUX AGRESSIFS
+  useEffect(() => {
+    // Marquer comme monté
+    isUnmountingRef.current = false
+
+    // Nettoyage au démontage UNIQUEMENT
+    return () => {
+      isUnmountingRef.current = true
+      console.log('🧹 Nettoyage des intervalles au démontage...')
+
+      // Nettoyer tous les intervalles stockés
+      intervalsRef.current.forEach(clearInterval)
+      intervalsRef.current = []
+    }
+  }, [])
+
+  // 🧭 NAVIGATION: État de la page actuelle
   const [currentPage, setCurrentPage] = useState('home')
 
-  // ⏳ CHARGEMENT: Indicateur de chargement pendant les requêtes API
+  // ⏳ CHARGEMENT: Indicateur de chargement
   const [isLoading, setIsLoading] = useState(false)
 
-  // 📊 DONNÉES: Historique des 24 dernières lectures du site sélectionné
+  // 📊 DONNÉES: États des données
   const [readings, setReadings] = useState([])
-
-  // 🏢 SITE: Site actuellement sélectionné (SANON/SIEGE/PLATEAU)
   const [selectedSite, setSelectedSite] = useState('SANON')
-
-  // ✅ NOUVEAU: État du site pour gestion adaptative (online/offline/error)
   const [siteStatus, setSiteStatus] = useState('online')
-
-  // 📈 LECTURE ACTUELLE: Dernière lecture disponible du site sélectionné
   const [latestReading, setLatestReading] = useState({
     temperature_c: '--',
     humidity_percent: '--',
@@ -48,58 +57,20 @@ function App() {
     recorded_at: '',
   })
 
-  // 🔄 DÉCLENCHEUR: Recharge les données quand le site change
-  useEffect(() => {
-    if (selectedSite === 'SANON') {
-      getReadings('ESP32_DHT11')
-    } else if (selectedSite === 'SIEGE') {
-      getReadings('ESP32_DHT11_SIEGE')
-    } else if (selectedSite === 'PLATEAU') {
-      getReadings('ESP32_DHT11_PLATEAU')
-    }
-  }, [selectedSite])
-
-  // 🔄 ACTUALISATION AUTOMATIQUE: Rafraîchit les données toutes les 30 secondes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('🔄 Actualisation automatique des données...')
-      if (selectedSite === 'SANON') {
-        getReadings('ESP32_DHT11')
-      } else if (selectedSite === 'SIEGE') {
-        getReadings('ESP32_DHT11_SIEGE')
-      } else if (selectedSite === 'PLATEAU') {
-        getReadings('ESP32_DHT11_PLATEAU')
-      }
-    }, 30000) // 30 secondes
-
-    return () => {
-      clearInterval(interval)
-    }
-  }, [selectedSite])
-
-  // 🌐 NAVIGATION URL: Gestion de la navigation via URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const page = urlParams.get('page')
-
-    if (page === 'dashboard') {
-      console.log('📊 Navigation vers le dashboard via URL')
-      setCurrentPage('dashboard')
-    } else if (page === 'home') {
-      console.log("🏠 Navigation vers l'accueil via URL")
-      setCurrentPage('home')
-    }
-  }, [])
-
-  // 🪟 MODAL: État de visibilité du modal "À propos"
+  // 🪟 MODAL: État du modal "À propos"
   const [showAboutModal, setShowAboutModal] = useState(false)
 
-  // 🌐 FONCTION PRINCIPALE: Récupération des données depuis l'API Supabase
+  // 🔄 FONCTION DE RÉCUPÉRATION DES DONNÉES - OPTIMISÉE
   const getReadings = async (siteId) => {
+    // 🛡️ PROTECTION: Ne pas faire de requête si le composant est démonté
+    if (isUnmountingRef.current) {
+      console.log('⏹️ Composant en cours de démontage, requête annulée')
+      return
+    }
+
     try {
       setIsLoading(true)
 
-      // 📡 REQUÊTE API: Récupération des 24 dernières lectures du site
       const response = await fetch(
         `https://zmdsgzswdovyxrvkfjml.supabase.co/rest/v1/api_sensorreading?order=recorded_at.desc&limit=24&device_id=eq.${siteId}`,
         {
@@ -112,22 +83,24 @@ function App() {
         },
       )
 
-      // ✅ VÉRIFICATION HTTP: Contrôle du statut de la réponse
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('Données reçues pour', siteId, ':', data)
 
-      // 🛡️ GESTION DÉFENSIVE: Vérification de l'existence et du contenu des données
+      // 🛡️ VÉRIFICATION: S'assurer que le composant est toujours monté
+      if (isUnmountingRef.current) {
+        console.log('⏹️ Composant démonté pendant la requête, données ignorées')
+        return
+      }
+
       if (data && data.length > 0) {
         setReadings(data)
         setLatestReading(data[0])
         setSiteStatus('online')
-        console.log('✅ Données chargées avec succès')
+        console.log('✅ Données mises à jour sans rechargement')
       } else {
-        // 🔴 SITE HORS LIGNE: Gestion des sites sans données disponibles
         setReadings([])
         setLatestReading({
           temperature_c: '--',
@@ -137,66 +110,162 @@ function App() {
           recorded_at: new Date().toISOString(),
         })
         setSiteStatus('offline')
-        console.log('⚠️ Aucune donnée disponible pour', siteId)
+        console.log('⚠️ Site hors ligne, interface mise à jour')
       }
-
-      setIsLoading(false)
     } catch (error) {
-      console.error('❌ Erreur lors de la récupération des données:', error)
+      console.error('❌ Erreur lors de la récupération:', error)
 
-      // 🚨 GESTION D'ERREUR: Fallback en cas d'échec de l'API
-      setReadings([])
-      setLatestReading({
-        temperature_c: '--',
-        humidity_percent: '--',
-        id: 0,
-        device_id: siteId,
-        recorded_at: new Date().toISOString(),
-      })
-      setSiteStatus('error')
-
-      setIsLoading(false)
+      // 🛡️ GESTION D'ERREUR SANS RECHARGEMENT
+      if (!isUnmountingRef.current) {
+        setReadings([])
+        setLatestReading({
+          temperature_c: '--',
+          humidity_percent: '--',
+          id: 0,
+          device_id: siteId,
+          recorded_at: new Date().toISOString(),
+        })
+        setSiteStatus('error')
+      }
+    } finally {
+      if (!isUnmountingRef.current) {
+        setIsLoading(false)
+      }
     }
   }
 
-  // 🎯 GESTIONNAIRE: Changement de site sélectionné
+  // 🔄 CHARGEMENT INITIAL DES DONNÉES
+  useEffect(() => {
+    const loadInitialData = () => {
+      const siteConfig = getSiteConfig(selectedSite)
+      if (siteConfig.enabled) {
+        getReadings(siteConfig.deviceId)
+      } else {
+        // ✅ CORRECTION : Vider les données pour les sites désactivés
+        console.log(`🧹 Site ${selectedSite} désactivé - Nettoyage des données`)
+        setReadings([])
+        setLatestReading({
+          temperature_c: '--',
+          humidity_percent: '--',
+          id: 0,
+          device_id: selectedSite,
+          recorded_at: new Date().toISOString(),
+        })
+        setSiteStatus('offline')
+      }
+    }
+
+    loadInitialData()
+  }, [selectedSite])
+
+  // 🔄 ACTUALISATION AUTOMATIQUE - VERSION SÉCURISÉE
+  useEffect(() => {
+    const siteConfig = getSiteConfig(selectedSite)
+
+    if (!siteConfig.enabled) {
+      console.log(
+        `⚠️ Site ${selectedSite} désactivé - Pas d'actualisation automatique`,
+      )
+      return
+    }
+
+    const refreshData = () => {
+      // 🛡️ DOUBLE PROTECTION
+      if (isUnmountingRef.current) {
+        console.log('⏹️ Actualisation annulée - composant démonté')
+        return
+      }
+
+      console.log('🔄 Actualisation automatique des données...')
+      getReadings(siteConfig.deviceId)
+    }
+
+    // 🔄 CRÉATION DE L'INTERVALLE SÉCURISÉ
+    const intervalId = setInterval(refreshData, getRefreshInterval('DATA'))
+
+    // 📝 STOCKER LA RÉFÉRENCE POUR LE NETTOYAGE
+    intervalsRef.current.push(intervalId)
+
+    // 🧹 NETTOYAGE DE CET INTERVALLE SPÉCIFIQUE
+    return () => {
+      clearInterval(intervalId)
+      intervalsRef.current = intervalsRef.current.filter(
+        (id) => id !== intervalId,
+      )
+    }
+  }, [selectedSite])
+
+  // 🌐 NAVIGATION URL - VERSION SÉCURISÉE
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const urlParams = new URLSearchParams(window.location.search)
+      const page = urlParams.get('page')
+
+      if (page === 'dashboard' && currentPage !== 'dashboard') {
+        console.log('📊 Navigation vers le dashboard via URL')
+        setCurrentPage('dashboard')
+      } else if (page === 'home' && currentPage !== 'home') {
+        console.log("🏠 Navigation vers l'accueil via URL")
+        setCurrentPage('home')
+      } else if (!page && currentPage !== 'home') {
+        console.log("🏠 Navigation vers l'accueil par défaut")
+        setCurrentPage('home')
+      }
+    }
+
+    // Vérification initiale
+    handleUrlChange()
+
+    // Écouter les changements d'URL (navigation navigateur)
+    const handlePopState = () => handleUrlChange()
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [currentPage])
+
+  // 🎯 GESTIONNAIRES D'ÉVÉNEMENTS - OPTIMISÉS
   const handleSelectSite = (site) => {
+    console.log(`🏢 Changement de site: ${site}`)
     setSelectedSite(site)
   }
 
-  // 🧭 NAVIGATION: Gestion du changement de page et des modals
   const navigateTo = (page) => {
     console.log(`🧭 Navigation vers: ${page}`)
 
     if (page === 'about') {
-      setShowAboutModal(true) // Ouvrir le modal
-    } else {
-      setCurrentPage(page)
-      setShowAboutModal(false) // Fermer le modal si on change de page
-
-      // ✅ MISE À JOUR URL: Synchroniser l'URL avec la navigation
-      const url = new URL(window.location)
-      if (page === 'home') {
-        url.searchParams.delete('page')
-      } else {
-        url.searchParams.set('page', page)
-      }
-
-      // Mettre à jour l'URL sans recharger la page
-      window.history.pushState({ page }, '', url.toString())
+      setShowAboutModal(true)
+      return
     }
+
+    // 🔄 MISE À JOUR DE L'ÉTAT ET DE L'URL
+    setCurrentPage(page)
+    setShowAboutModal(false)
+
+    // 🌐 MISE À JOUR DE L'URL SANS RECHARGEMENT
+    const url = new URL(window.location)
+    if (page === 'home') {
+      url.searchParams.delete('page')
+    } else {
+      url.searchParams.set('page', page)
+    }
+
+    // 📝 MISE À JOUR SILENCIEUSE DE L'URL
+    window.history.pushState({ page }, '', url.toString())
   }
 
-  // ⏳ ÉCRAN DE CHARGEMENT: Affichage pendant la récupération des données
-  if (isLoading) {
+  // ⏳ ÉCRAN DE CHARGEMENT
+  if (isLoading && readings.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen">
         <CircularProgress />
+        <span className="ml-4 text-gray-600">Chargement des données...</span>
       </div>
     )
   }
 
-  // 📊 PAGE DASHBOARD: Affichage de la page dashboard avec modal
+  // 📊 PAGE DASHBOARD
   if (currentPage === 'dashboard') {
     return (
       <>
@@ -213,10 +282,10 @@ function App() {
     )
   }
 
-  // 🏠 PAGE PRINCIPALE: Interface principale avec sélecteur de site
+  // 🏠 PAGE PRINCIPALE
   return (
     <div className="font-sans bg-gradient-to-br from-[#F5F7FA] to-[#E0E7FF] text-foreground min-h-screen">
-      {/* 🎨 EFFETS VISUELS: Particules d'arrière-plan animées */}
+      {/* 🎨 EFFETS VISUELS */}
       <div className="fixed inset-0 pointer-events-none -z-10">
         <div className="particle w-2 h-2 left-[10%]"></div>
         <div className="particle w-3 h-3 left-[20%]"></div>
@@ -229,7 +298,7 @@ function App() {
         <div className="particle w-2 h-2 left-[90%]"></div>
       </div>
 
-      {/* 🧩 COMPOSANTS PRINCIPAUX: Structure de l'interface */}
+      {/* 🧩 COMPOSANTS PRINCIPAUX */}
       <Header onNavigate={navigateTo} currentPage={currentPage} />
       <Section />
       <MainContent
@@ -238,7 +307,7 @@ function App() {
         fetchLatestData={getReadings}
         selectedSite={selectedSite}
         handleSelectSite={handleSelectSite}
-        siteStatus={siteStatus} // ✅ NOUVEAU: Statut du site pour interface adaptative
+        siteStatus={siteStatus}
       />
       <AboutModal
         isOpen={showAboutModal}

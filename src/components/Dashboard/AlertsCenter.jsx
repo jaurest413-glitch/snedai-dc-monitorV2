@@ -1,4 +1,8 @@
 import React, { useEffect, useState } from 'react'
+import {
+  createSafeInterval,
+  getRefreshInterval,
+} from '../../config/refreshConfig'
 
 // Composant principal de gestion des alertes
 const AlertsSystem = ({
@@ -162,11 +166,25 @@ const AlertsSystem = ({
   }
   // Effet pour initialiser et gérer les intervalles
   useEffect(() => {
-    fetchAlerts()
-    const interval = setInterval(fetchAlerts, refreshInterval)
+    console.log('🔍 TRACE: AlertsCenter useEffect DÉCLENCHÉ')
+    console.log('🔍 TRACE: siteId =', siteId)
+    console.log('🔍 TRACE: readingsLimit =', readingsLimit)
+    console.log('🔍 TRACE: refreshInterval =', refreshInterval)
 
-    return () => {
-      clearInterval(interval)
+    try {
+      console.log('🔍 TRACE: Appel fetchAlerts() initial')
+      fetchAlerts()
+
+      console.log('🔍 TRACE: Création createSafeInterval pour AlertsRefresh')
+      const cleanup = createSafeInterval(
+        fetchAlerts,
+        getRefreshInterval('ALERTS'),
+        'AlertsRefresh',
+      )
+
+      return cleanup
+    } catch (error) {
+      console.error("❌ Erreur lors de l'initialisation des alertes:", error)
     }
   }, [siteId, readingsLimit, refreshInterval])
 
